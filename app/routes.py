@@ -12,16 +12,32 @@ from config import Config
 
 bp = Blueprint('app', __name__)
 
-# Hugging Face API কনফিগারেশন
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+# Hugging Face API কনফিগারেশন (সঠিক মডেল সহ)
+API_URL = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
 headers = {"Authorization": f"Bearer {Config.HUGGINGFACE_API_TOKEN}"}
-
 
 def query_huggingface(payload):
     """Hugging Face API তে রিকোয়েস্ট পাঠানোর জন্য ফাংশন"""
-    response = requests.post(API_URL, headers=headers, json=payload)
-    return response.json()
+    response = requests.post(API_URL, headers=headers, json=payload, timeout=60) # 60 সেকেন্ড টাইমআউট যোগ করা হয়েছে
 
+    # প্রথমে চেক করুন যে HTTP স্ট্যাটাস কোড সফল (200-299) কিনা
+    if response.status_code >= 200 and response.status_code < 300:
+        # রেসপন্সের কন্টেন্ট আছে কিনা চেক করুন
+        if response.text:
+            try:
+                return response.json()
+            except ValueError: # JSON পার্স করতে না পারলে
+                print(f"Failed to parse JSON. Raw response: {response.text}")
+                return {"error": f"Invalid JSON response from API: {response.text}"}
+        else:
+            return {"error": "Empty response from API."}
+    else:
+        # HTTP এরর হলে, স্ট্যাটাস কোড এবং টেক্সট দেখান
+        error_message = f"API request failed with status code {response.status_code}."
+        if response.text:
+            error_message += f" Response: {response.text}"
+        print(error_message)
+        return {"error": error_message}
 
 @bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -246,14 +262,23 @@ def generate_roadmap(career_goal):
             }
         })
 
-        # রেসপন্স থেকে টেক্সট বের করুন
+        # টার্মিনালে পুরো রেসপন্স প্রিন্ট করুন (ডিবাগিং এর জন্য)
+        print("Full API Response:")
+        print(response)
+
+        # রেসপন্স থেকে টেক্সট বের করার চেষ্টা করুন
         if isinstance(response, list) and len(response) > 0 and 'generated_text' in response[0]:
             return response[0]['generated_text'].strip()
+        # যদি রেসপন্সে এরর থাকে
+        elif isinstance(response, dict) and 'error' in response:
+            return f"API Error: {response['error']}"
+        # অন্য কোনো ফরম্যাট হলে
         else:
-            return "Error: Unexpected response format from the API."
+            return "Error: Unexpected response format from the API. Please check the terminal for more details."
     except Exception as e:
+        # টার্মিনালে বিস্তারিত এরর দেখানোর জন্য
+        print(f"Full error: {e}")
         return f"Error generating roadmap: {str(e)}. Please try again later."
-
 
 def get_ai_mentor_response(message, career_goal):
     """Get AI mentor response using Hugging Face Inference API"""
@@ -278,10 +303,20 @@ def get_ai_mentor_response(message, career_goal):
             }
         })
 
-        # রেসপন্স থেকে টেক্সট বের করুন
+        # টার্মিনালে পুরো রেসপন্স প্রিন্ট করুন (ডিবাগিং এর জন্য)
+        print("Full API Response:")
+        print(response)
+
+        # রেসপন্স থেকে টেক্সট বের করার চেষ্টা করুন
         if isinstance(response, list) and len(response) > 0 and 'generated_text' in response[0]:
             return response[0]['generated_text'].strip()
+        # যদি রেসপন্সে এরর থাকে
+        elif isinstance(response, dict) and 'error' in response:
+            return f"API Error: {response['error']}"
+        # অন্য কোনো ফরম্যাট হলে
         else:
-            return "Error: Unexpected response format from the API."
+            return "Error: Unexpected response format from the API. Please check the terminal for more details."
     except Exception as e:
+        # টার্মিনালে বিস্তারিত এরর দেখানোর জন্য
+        print(f"Full error: {e}")
         return f"Sorry, I'm having trouble connecting right now. Please try again later. Error: {str(e)}"
