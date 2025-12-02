@@ -1,0 +1,44 @@
+<!-- app/templates/update_progress.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">Update Your Progress</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="">
+                    <div class="mb-3">
+                        <label for="skill" class="form-label">Skill</label>
+                        <input type="text" class="form-control" id="skill" name="skill" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="level" class="form-label">Proficiency Level (1-10)</label>
+                        <input type="range" class="form-range" min="1" max="10" id="level" name="level" required>
+                        <div class="d-flex justify-content-between">
+                            <span>Beginner</span>
+                            <span id="level-value">5</span>
+                            <span>Expert</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Update Progress</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('level').addEventListener('input', function() {
+        document.getElementById('level-value').textContent = this.value;
+    });
+</script>
+{% endblock %}

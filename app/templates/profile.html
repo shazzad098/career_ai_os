@@ -1,0 +1,76 @@
+<!-- app/templates/profile.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- প্রোফাইলের মূল অংশ -->
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-body text-center">
+                <img src="https://i.pravatar.cc/150?u={{ current_user.email }}" class="rounded-circle img-fluid mb-3" alt="Profile Picture">
+                <h4 class="card-title">{{ current_user.username }}</h4>
+                <p class="card-text text-muted">{{ current_user.email }}</p>
+                <p class="card-text"><strong>Career Goal:</strong> {{ current_user.career_goal or 'Not set yet' }}</p>
+                <a href="{{ url_for('app.edit_profile') }}" class="btn btn-outline-primary">Edit Profile</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- প্রোফাইলের বিস্তারিত তথ্য -->
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Profile Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><strong>Username:</strong></span>
+                        <span>{{ current_user.username }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><strong>Email:</strong></span>
+                        <span>{{ current_user.email }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><strong>Member Since:</strong></span>
+                        <span>{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><strong>Career Goal:</strong></span>
+                        <span>{{ current_user.career_goal or 'Not set' }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">Your Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-primary">{{ tasks|selectattr('completed', 'equalto', True)|list|length }}</h3>
+                            <p>Completed Tasks</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-success">{{ progress|length }}</h3>
+                            <p>Skills Tracked</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3">
+                            <h3 class="text-info">{{ roadmaps|length }}</h3>
+                            <p>Roadmaps Generated</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

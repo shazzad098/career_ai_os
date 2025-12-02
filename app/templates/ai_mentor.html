@@ -1,0 +1,118 @@
+<!-- app/templates/ai_mentor.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0 text-center">AI Career Mentor</h3>
+            </div>
+            <div class="card-body p-0">
+                <div id="chat-container" class="p-3" style="height: 450px; overflow-y: auto; background-color: #f8f9fa;">
+                    <!-- ওয়েলকাম মেসেজ -->
+                    <div class="d-flex justify-content-start mb-3">
+                        <div class="bg-white rounded p-3 shadow-sm">
+                            <strong>AI Mentor:</strong> Hello! I'm your AI career mentor. I'm here to help you with your journey to become a {{ current_user.career_goal or 'professional' }}. How can I assist you today?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- মেসেজ ইনপুট ফর্ম -->
+                <form id="mentor-form" class="p-3 border-top">
+                    <div class="input-group">
+                        <input type="text" id="message-input" class="form-control" placeholder="Ask your question here..." autocomplete="off">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-send-fill"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('mentor-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const messageInput = document.getElementById('message-input');
+        const message = messageInput.value.trim();
+
+        if (message === '') return;
+
+        const chatContainer = document.getElementById('chat-container');
+
+        // ইউজারের মেসেজ যোগ করুন
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'd-flex justify-content-end mb-3';
+        userMessageDiv.innerHTML = `
+            <div class="bg-primary text-white rounded p-3 shadow-sm" style="max-width: 80%;">
+                <strong>You:</strong> ${message}
+            </div>
+        `;
+        chatContainer.appendChild(userMessageDiv);
+
+        // ইনপুট ফিল্ড ক্লিয়ার করুন
+        messageInput.value = '';
+
+        // লোডিং ইন্ডিকেটর যোগ করুন
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'd-flex justify-content-start mb-3';
+        loadingDiv.innerHTML = `
+            <div class="bg-light rounded p-3 shadow-sm">
+                <strong>AI Mentor:</strong> <em>Thinking...</em>
+            </div>
+        `;
+        chatContainer.appendChild(loadingDiv);
+
+        // চ্যাট কন্টেইনার নিচে স্ক্রোল করুন
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // সার্ভারে মেসেজ পাঠান
+        fetch('/ai_mentor', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `message=${encodeURIComponent(message)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            // লোডিং ইন্ডিকেটর সরান
+            chatContainer.removeChild(loadingDiv);
+
+            // AI রেসপন্স যোগ করুন
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'd-flex justify-content-start mb-3';
+            aiMessageDiv.innerHTML = `
+                <div class="bg-white rounded p-3 shadow-sm" style="max-width: 80%;">
+                    <strong>AI Mentor:</strong> ${data.response}
+                </div>
+            `;
+            chatContainer.appendChild(aiMessageDiv);
+
+            // চ্যাট কন্টেইনার নিচে স্ক্রোল করুন
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // লোডিং ইন্ডিকেটর সরান
+            chatContainer.removeChild(loadingDiv);
+
+            // এরর মেসেজ যোগ করুন
+            const errorMessageDiv = document.createElement('div');
+            errorMessageDiv.className = 'd-flex justify-content-start mb-3';
+            errorMessageDiv.innerHTML = `
+                <div class="bg-danger text-white rounded p-3 shadow-sm">
+                    <strong>System:</strong> Sorry, I encountered an error. Please try again later.
+                </div>
+            `;
+            chatContainer.appendChild(errorMessageDiv);
+
+            // চ্যাট কন্টেইনার নিচে স্ক্রোল করুন
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+    });
+</script>
+{% endblock %}

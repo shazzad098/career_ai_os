@@ -1,0 +1,27 @@
+<!-- app/templates/career_goal.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">Set Your Career Goal</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-center mb-4">Tell us what you want to become, and our AI will generate a personalized learning roadmap for you.</p>
+                <form method="POST" action="">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.career_goal.label(class="form-label") }}
+                        {{ form.career_goal(class="form-select") }}
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
