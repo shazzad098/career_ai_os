@@ -10,5 +10,4 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')  # এই লাইনটি ডিলিট বা কমেন্ট করে দিন
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+    HUGGINGFACE_API_TOKEN = os.environ.get('HUGGINGFACE_API_TOKEN')

@@ -6,14 +6,21 @@ from app import db
 from app.models import User, Roadmap, Task, Progress
 from app.forms import LoginForm, RegistrationForm, CareerGoalForm, TaskForm, EditProfileForm
 from datetime import datetime
-import google.generativeai as genai
+import requests
 import os
 from config import Config
 
-# Gemini API কনফিগার করুন
-genai.configure(api_key=Config.GEMINI_API_KEY)
-
 bp = Blueprint('app', __name__)
+
+# Hugging Face API কনফিগারেশন
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+headers = {"Authorization": f"Bearer {Config.HUGGINGFACE_API_TOKEN}"}
+
+
+def query_huggingface(payload):
+    """Hugging Face API তে রিকোয়েস্ট পাঠানোর জন্য ফাংশন"""
+    response = requests.post(API_URL, headers=headers, json=payload)
+    return response.json()
 
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -80,16 +87,13 @@ def career_goal():
         roadmap_content = generate_roadmap(form.career_goal.data)
 
         # Save roadmap to database
-        # প্রথমে চেক করুন ইউজারের আগে থেকে কোনো রোডম্যাপ আছে কিনা
         existing_roadmap = Roadmap.query.filter_by(user_id=current_user.id).first()
         if existing_roadmap:
-            # আগের রোডম্যাপটি আপডেট করুন
             existing_roadmap.title = f"{form.career_goal.data} Roadmap"
             existing_roadmap.content = roadmap_content
             db.session.commit()
             roadmap_id = existing_roadmap.id
         else:
-            # নতুন রোডম্যাপ তৈরি করুন
             roadmap = Roadmap(
                 title=f"{form.career_goal.data} Roadmap",
                 content=roadmap_content,
@@ -171,7 +175,6 @@ def update_progress():
         level = int(request.form.get('level'))
         notes = request.form.get('notes')
 
-        # Check if progress for this skill already exists
         progress = Progress.query.filter_by(user_id=current_user.id, skill=skill).first()
 
         if progress:
@@ -196,7 +199,6 @@ def update_progress():
 @bp.route('/profile')
 @login_required
 def profile():
-    # Get user's data for the profile page
     tasks = Task.query.filter_by(user_id=current_user.id).all()
     progress = Progress.query.filter_by(user_id=current_user.id).all()
     roadmaps = Roadmap.query.filter_by(user_id=current_user.id).all()
@@ -212,7 +214,6 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.email = form.email.data
         current_user.career_goal = form.career_goal.data
-        # about_me field যোগ করতে হলে models.py এ User মডেলে যোগ করতে হবে
         db.session.commit()
         flash('Your changes have been saved.')
         return redirect(url_for('app.profile'))
@@ -223,43 +224,64 @@ def edit_profile():
     return render_template('edit_profile.html', title='Edit Profile', form=form)
 
 
-# --- Helper Functions for Gemini API ---
+# --- Helper Functions for Hugging Face API ---
 
 def generate_roadmap(career_goal):
-    """Generate a career roadmap using Gemini Flash API"""
+    """Generate a career roadmap using Hugging Face Inference API"""
     try:
-        # মডেল সিলেক্ট করুন - gemini-1.5-flash হলো ফ্রি API এর জন্য
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # প্রম্পট তৈরি করুন
         prompt = f"Generate a detailed learning roadmap for someone who wants to become a {career_goal}. Include specific skills, resources, and timeline. Format the response in markdown with clear sections."
 
-        # Gemini API তে রিকোয়েস্ট পাঠান
-        response = model.generate_content(prompt)
+        # মডেলের জন্য ইনপুট ফরম্যাট করুন
+        formatted_prompt = f"<s>[INST] {prompt} [/INST]"
+
+        # API তে রিকোয়েস্ট পাঠান
+        response = query_huggingface({
+            "inputs": formatted_prompt,
+            "parameters": {
+                "max_new_tokens": 2048,
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "top_k": 50,
+                "return_full_text": False
+            }
+        })
 
         # রেসপন্স থেকে টেক্সট বের করুন
-        return response.text
+        if isinstance(response, list) and len(response) > 0 and 'generated_text' in response[0]:
+            return response[0]['generated_text'].strip()
+        else:
+            return "Error: Unexpected response format from the API."
     except Exception as e:
-        return f"Error generating roadmap: {str(e)}. Please check your Gemini API key and try again."
+        return f"Error generating roadmap: {str(e)}. Please try again later."
 
 
 def get_ai_mentor_response(message, career_goal):
-    """Get AI mentor response using Gemini Flash API"""
+    """Get AI mentor response using Hugging Face Inference API"""
     try:
-        # যদি ব্যবহারকারীর ক্যারিয়ার গোল না থাকে, তাহলে একটি ডিফল্ট গোল সেট করুন
         if not career_goal:
             career_goal = "a professional"
 
-        # মডেল সিলেক্ট করুন - gemini-1.5-flash হলো ফ্রি API এর জন্য
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # প্রম্পট তৈরি করুন
         prompt = f"As a career mentor for someone who wants to become a {career_goal}, respond to the following question in a helpful and encouraging way: {message}"
 
-        # Gemini API তে রিকোয়েস্ট পাঠান
-        response = model.generate_content(prompt)
+        # মডেলের জন্য ইনপুট ফরম্যাট করুন
+        formatted_prompt = f"<s>[INST] {prompt} [/INST]"
+
+        # API তে রিকোয়েস্ট পাঠান
+        response = query_huggingface({
+            "inputs": formatted_prompt,
+            "parameters": {
+                "max_new_tokens": 1024,
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "top_k": 50,
+                "return_full_text": False
+            }
+        })
 
         # রেসপন্স থেকে টেক্সট বের করুন
-        return response.text
+        if isinstance(response, list) and len(response) > 0 and 'generated_text' in response[0]:
+            return response[0]['generated_text'].strip()
+        else:
+            return "Error: Unexpected response format from the API."
     except Exception as e:
         return f"Sorry, I'm having trouble connecting right now. Please try again later. Error: {str(e)}"
